@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">FoodRecipeLocalDBCache</string>
+    <string name="title">title</string>
+    <string name="publisher">publisher</string>
+    <string name="rank">rank</string>
+    <string name="todo">TODO</string>
+    <string name="bbq">BBQ</string>
+    <string name="categories">Categories</string>
+    <string name="_100">100</string>
+    <string name="ingredients">Ingredients</string>
+    <string name="some_recipe_title">Some Recipe Title</string>
+    <string name="no_more_results">No more results...</string>
+    <string name="barbecue">Barbecue</string>
+</resources>
