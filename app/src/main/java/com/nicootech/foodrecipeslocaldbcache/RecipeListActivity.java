@@ -7,8 +7,9 @@ import com.nicootech.foodrecipeslocaldbcache.adapters.OnRecipeListener;
 import com.nicootech.foodrecipeslocaldbcache.adapters.RecipeRecyclerAdapter;
 import com.nicootech.foodrecipeslocaldbcache.util.VerticalSpacingItemDecorator;
 import com.nicootech.foodrecipeslocaldbcache.viewmodels.RecipeListViewModel;
+import androidx.annotation.Nullable;
 import androidx.appcompat.widget.SearchView;
-import androidx.appcompat.widget.Toolbar;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -34,9 +35,31 @@ public class RecipeListActivity extends BaseActivity implements OnRecipeListener
 
         initRecyclerView();
         initSearchView();
-        setSupportActionBar((Toolbar)findViewById(R.id.toolbar));
+        subscribeObservers();
+        setSupportActionBar(findViewById(R.id.toolbar));
     }
 
+    private void subscribeObservers(){
+        mRecipeListViewModel.getViewState().observe(this, new Observer<RecipeListViewModel.ViewState>() {
+            @Override
+            public void onChanged(@Nullable RecipeListViewModel.ViewState viewState) {
+                if(viewState != null){
+                    switch (viewState){
+
+                        case RECIPES:{
+                            // recipes will show automatically from other observer
+                            break;
+                        }
+
+                        case CATEGORIES:{
+                            displaySearchCategories();
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+    }
 
     private void initRecyclerView(){
         mAdapter = new RecipeRecyclerAdapter(this);
@@ -71,10 +94,16 @@ public class RecipeListActivity extends BaseActivity implements OnRecipeListener
 
     @Override
     public void onCategoryClick(String category) {
-        
+
     }
 
+    private void displaySearchCategories(){
+        mAdapter.displaySearchCategories();
+    }
+
+
 }
+
 
 
 

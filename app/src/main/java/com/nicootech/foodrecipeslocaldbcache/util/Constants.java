@@ -10,14 +10,5 @@ public class Constants {
             {"Barbecue", "Breakfast", "Chicken", "Beef", "Brunch", "Dinner", "Wine", "Italian"};
 
     public static final String[] DEFAULT_SEARCH_CATEGORY_IMAGES =
-            {
-                    "barbecue",
-                    "breakfast",
-                    "chicken",
-                    "beef",
-                    "brunch",
-                    "dinner",
-                    "wine",
-                    "italian"
-            };
+            {"barbecue", "breakfast", "chicken", "beef", "brunch", "dinner", "wine", "italian"};
 }
