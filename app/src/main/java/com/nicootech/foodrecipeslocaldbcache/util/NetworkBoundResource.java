@@ -1,6 +1,7 @@
 package com.nicootech.foodrecipeslocaldbcache.util;
 
 import android.icu.text.CaseMap;
+import android.util.Log;
 
 import com.nicootech.foodrecipeslocaldbcache.AppExecutors;
 import com.nicootech.foodrecipeslocaldbcache.requests.responses.ApiResponse;
@@ -16,6 +17,9 @@ import androidx.lifecycle.Observer;
 // CacheObject: Type for the Resource data. (database cache)
 // RequestObject: Type for the API response. (network request)
 public abstract class NetworkBoundResource<CacheObject, RequestObject> {
+
+    private static final String TAG = "NetworkBoundResource";
+
 
     private AppExecutors appExecutors;
     private MediatorLiveData<Resource<CacheObject>> results = new MediatorLiveData<>();
@@ -40,6 +44,7 @@ public abstract class NetworkBoundResource<CacheObject, RequestObject> {
 
                 if(shouldFetch(cacheObject)){
                     //get data from the network
+                    fetchFromNetwork(dbSource);
                 }
                 else{
                     results.addSource(dbSource, new Observer<CacheObject>() {
@@ -52,6 +57,87 @@ public abstract class NetworkBoundResource<CacheObject, RequestObject> {
             }
         });
 
+    }
+
+    private void fetchFromNetwork(final LiveData<CacheObject>dbSource){
+        Log.d(TAG, "fetchFromNetwork: called.");
+        //update liveData for loading status
+        results.addSource(dbSource, new Observer<CacheObject>() {
+            @Override
+            public void onChanged(CacheObject cacheObject) {
+                setValue(Resource.loading(cacheObject));
+            }
+        });
+
+        final LiveData<ApiResponse<RequestObject>>apiResponse = createCall();
+
+        results.addSource(apiResponse, new Observer<ApiResponse<RequestObject>>() {
+            @Override
+            public void onChanged(ApiResponse<RequestObject> requestObjectApiResponse) {
+                results.removeSource(dbSource);
+                results.removeSource(apiResponse);
+                /*
+                * 1) ApiSuccessResponse
+                * 2) ApiErrorResponse
+                * 3) ApiEmptyResponse
+                * */
+                if(requestObjectApiResponse instanceof ApiResponse.ApiSuccessResponse){
+                    Log.d(TAG, "onChanged: ApiSuccessResponse.");
+
+                    appExecutors.diskIO().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            
+                            // save the response to the local db
+                            saveCallResult((RequestObject)processResponse((ApiResponse.ApiSuccessResponse)requestObjectApiResponse));
+
+                            appExecutors.mainThread().execute(new Runnable() {
+                                @Override
+                                public void run() {
+                                    results.addSource(loadFromDb(), new Observer<CacheObject>() {
+                                        @Override
+                                        public void onChanged(CacheObject cacheObject) {
+                                            setValue(Resource.success(cacheObject));
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+                else if(requestObjectApiResponse instanceof ApiResponse.ApiEmptyResponse){
+                    Log.d(TAG, "onChanged: ApiEmptyResponse");
+                    appExecutors.mainThread().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            results.addSource(loadFromDb(), new Observer<CacheObject>() {
+                                @Override
+                                public void onChanged(CacheObject cacheObject) {
+                                    setValue(Resource.success(cacheObject));
+                                }
+                            });
+                        }
+                    });
+
+                }
+                else if(requestObjectApiResponse instanceof ApiResponse.ApiErrorResponse){
+                    Log.d(TAG, "onChanged: ApiErrorResponse.");
+                    results.addSource(dbSource, new Observer<CacheObject>() {
+                        @Override
+                        public void onChanged(CacheObject cacheObject) {
+                            setValue(
+                                    Resource.error(
+                                            ((ApiResponse.ApiErrorResponse)requestObjectApiResponse).getErrorMessage(),cacheObject)
+                            );
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    private CacheObject processResponse(ApiResponse.ApiSuccessResponse response){
+        return (CacheObject) response.getBody();
     }
 
     private void setValue(Resource<CacheObject> newValue){
